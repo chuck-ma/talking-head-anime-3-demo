@@ -390,6 +390,11 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
 
             # Mouth
         if True:
+            # 发现 使用 https://github.com/google/mediapipe 得到的 jawOpen系数有问题
+            # 大部分情况下都是小于 0.1, 从而导致 mouth_open 在大部分情况下为 0.0
+            # 现在先做一些 tricky ,直接把 jawOpen * 10,再和 1比较，取最小值
+            ifacialmocap_pose[JAW_OPEN] = min(ifacialmocap_pose[JAW_OPEN] * 10, 1.0)
+
             jaw_open_denom = self.args.jaw_open_max_value - self.args.jaw_open_min_value
             mouth_open = clamp((ifacialmocap_pose[JAW_OPEN] - self.args.jaw_open_min_value) / jaw_open_denom, 0.0, 1.0)
             pose[self.mouth_aaa_index] = mouth_open
