@@ -2,6 +2,8 @@ import math
 import time
 from enum import Enum
 from typing import Optional, Dict, List
+import numpy as np
+
 
 import numpy
 import scipy.optimize
@@ -39,6 +41,36 @@ def deg_to_rad(deg):
 
 def clamp(x, min_value, max_value):
     return max(min_value, min(max_value, x))
+
+def get_mouth_open(landmarks, top_lip_index, bottom_lip_index, min_value=0.005, max_value=0.1):
+    """
+    Calculate the normalized mouth open value based on 3D landmarks.
+    
+    Parameters:
+    landmarks (numpy.ndarray): An array of shape (478, 3) containing the 3D coordinates of the face landmarks.
+    top_lip_index (int): The index of the top lip landmark.
+    bottom_lip_index (int): The index of the bottom lip landmark.
+    min_value (float): The minimum possible value of mouth open height.
+    max_value (float): The maximum possible value of mouth open height.
+    
+    Returns:
+    float: The normalized value of mouth open height in the range [0, 1].
+    """
+    # Calculate the Euclidean distance between the top and bottom lip landmarks in 3D space
+    lip_distance = np.linalg.norm(landmarks[top_lip_index] - landmarks[bottom_lip_index])
+
+    # Normalize the lip distance to the range [0, 1]
+    
+
+    # Clamp the normalized value to the range [0, 1] to handle possible outliers
+    #normalized_value = np.clip(normalized_value, 0, 1)
+    
+    mouth_open = clamp((lip_distance - min_value) / max_value, 0.0, 1.0)
+    #print('lip_distance', lip_distance, landmarks[top_lip_index], landmarks[bottom_lip_index], (lip_distance - min_value) / max_value)
+
+    mouth_open = round(mouth_open, 2)
+
+    return mouth_open
 
 
 class IFacialMocapPoseConverter25Args:
@@ -275,7 +307,7 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
                 sign = 1.0
             return (threshold * sign, (abs(param) - threshold) * sign)
 
-    def convert(self, ifacialmocap_pose: Dict[str, float]) -> List[float]:
+    def convert(self, ifacialmocap_pose: Dict[str, float], landmarks) -> List[float]:
         pose = [0.0 for i in range(self.pose_size)]
 
         smile_value = \
@@ -393,10 +425,16 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
             # 发现 使用 https://github.com/google/mediapipe 得到的 jawOpen系数有问题
             # 大部分情况下都是小于 0.1, 从而导致 mouth_open 在大部分情况下为 0.0
             # 现在先做一些 tricky ,直接把 jawOpen * 10,再和 1比较，取最小值
-            ifacialmocap_pose[JAW_OPEN] = min(ifacialmocap_pose[JAW_OPEN] * 10, 1.0)
+            # ifacialmocap_pose[JAW_OPEN] = min(ifacialmocap_pose[JAW_OPEN] * 10, 1.0)
+            # 再琢磨，发现问题的点大概率不在于 mediapipe出错了, 而是下面这部分代码有问题
+            # 或者说下面的嘴部变形的策略，没有那么敏感，它一定要下颚张开到一定程度，才会让嘴张开
+            # 但是这样的策略不符合我们的产品预期
+            # 所以基于 landmarks 重新实现了 mouth_open 逻辑
 
-            jaw_open_denom = self.args.jaw_open_max_value - self.args.jaw_open_min_value
-            mouth_open = clamp((ifacialmocap_pose[JAW_OPEN] - self.args.jaw_open_min_value) / jaw_open_denom, 0.0, 1.0)
+
+            # jaw_open_denom = self.args.jaw_open_max_value - self.args.jaw_open_min_value
+            # mouth_open = clamp((ifacialmocap_pose[JAW_OPEN] - self.args.jaw_open_min_value) / jaw_open_denom, 0.0, 1.0)
+            mouth_open = get_mouth_open(landmarks, 13, 14)
             pose[self.mouth_aaa_index] = mouth_open
             pose[self.mouth_raised_corner_left_index] = clamp(smile_value, 0.0, 1.0)
             pose[self.mouth_raised_corner_right_index] = clamp(smile_value, 0.0, 1.0)
