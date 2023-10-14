@@ -441,13 +441,14 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
             pose[self.mouth_raised_corner_right_index] = clamp(smile_value, 0.0, 1.0)
 
             is_mouth_open = mouth_open > 0.0
-            if not is_mouth_open:
-                mouth_frown_value = clamp(
-                    (ifacialmocap_pose[MOUTH_FROWN_LEFT] + ifacialmocap_pose[
-                        MOUTH_FROWN_RIGHT]) / self.args.mouth_frown_max_value, 0.0, 1.0)
-                pose[self.mouth_lowered_corner_left_index] = mouth_frown_value
-                pose[self.mouth_lowered_corner_right_index] = mouth_frown_value
-            else:
+
+            mouth_frown_value = clamp(
+                (ifacialmocap_pose[MOUTH_FROWN_LEFT] + ifacialmocap_pose[
+                    MOUTH_FROWN_RIGHT]) / self.args.mouth_frown_max_value, 0.0, 1.0)
+            pose[self.mouth_lowered_corner_left_index] = mouth_frown_value
+            pose[self.mouth_lowered_corner_right_index] = mouth_frown_value
+
+            if is_mouth_open:
                 mouth_lower_down = clamp(
                     ifacialmocap_pose[MOUTH_LOWER_DOWN_LEFT] + ifacialmocap_pose[MOUTH_LOWER_DOWN_RIGHT], 0.0, 1.0)
                 mouth_funnel = ifacialmocap_pose[MOUTH_FUNNEL]
