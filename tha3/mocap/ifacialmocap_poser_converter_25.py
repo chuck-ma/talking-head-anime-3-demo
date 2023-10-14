@@ -308,6 +308,7 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
             return (threshold * sign, (abs(param) - threshold) * sign)
 
     def convert(self, ifacialmocap_pose: Dict[str, float], landmarks) -> List[float]:
+        print('converting...')
         pose = [0.0 for i in range(self.pose_size)]
 
         smile_value = \
